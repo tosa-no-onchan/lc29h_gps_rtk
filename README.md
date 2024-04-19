@@ -26,6 +26,7 @@
 ````  
         # for ntrip_Client
         DeclareLaunchArgument('ip', default_value='183.178.46.135', description=''), 
+        DeclareLaunchArgument('port', default_value='2101', description=''),
         DeclareLaunchArgument('user', default_value='IBS', description=''),
         DeclareLaunchArgument('passwd', default_value='IBS', description=''),
         DeclareLaunchArgument('mountpoint', default_value='T430_32', description=''),
