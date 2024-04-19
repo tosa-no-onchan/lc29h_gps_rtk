@@ -18,7 +18,7 @@
     $ . install/setup.bash  
 #### 2. update launch param  
 
-    $ cd launch  
+    $ cd src/lc29h_gps_rtk/launch  
     $ mv lc29h_gps_rtk.launch.py-sample lc29h_gps_rtk.launch.py  
   
     edit launh.py  
