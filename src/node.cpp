@@ -94,7 +94,7 @@ void Lc29hNode::init(std::shared_ptr<rclcpp::Node> node) {
 
 
   //gps.subscribe_char(boost::bind(&GysfdmaxbNode::publish_void_char,this,_1));
-  rtk_fix_f_=false;
+  //rtk_fix_f_=false;
   time_prev_ = std::chrono::system_clock::now();
   speed_over_cnt_=0;
 
@@ -221,11 +221,14 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
         if(list[6] != "4" && list[6] != "5")
           return; 
 
-        if(rtk_fix_f_==false){
+        if(gps.rtk_fix_f_==false){
           std::cout << " $GNGGA Fix complete!! status:" << list[6] << std::endl;
-          rtk_fix_f_=true;
+          gps.rtk_fix_f_=true;
+          // test もう一度だけ、 gps.set_gga() を実行する。by nishi 2024.4.19
+          gps.set_ggaf_=false;
         }
 
+        bool pub_f=true;
         // set up Ros Publish part
         fix_ =std::make_shared<sensor_msgs::msg::NavSatFix>();
         //fix_.status.status  = sensor_msgs::NavSatStatus::STATUS_FIX;
@@ -303,7 +306,9 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
           // 33	93452.8629	110904.4688	1557.5477	1848.4078	0.0000107006	0.0000090168
           // 移動距離を計算
           double off_latitude=(fix_->latitude - latitude_prev_) * 110904.4688;    // 距離[m]
+          //double off_latitude=(fix_->latitude - latitude_prev_);    // 角度
           double off_longitude=(fix_->longitude - longitude_prev_) * 93452.8629;  // 距離[m]
+          //double off_longitude=(fix_->longitude - longitude_prev_);  // 角度
           double off_altitude=fix_->altitude - altitude_prev_;
 
           //std::cout <<" off_latitude:"<< off_latitude <<std::endl;
@@ -311,30 +316,33 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
 
           //https://cpprefjp.github.io/reference/cmath/hypot.html
           //double speed = std::hypot(off_latitude, off_longitude, off_altitude)/time_offs;
-          double speed = std::hypot(off_latitude, off_longitude)/time_offs;  // 移動速度  [m/s]
+          //double speed = std::hypot(off_latitude, off_longitude)/time_offs;  // 移動速度  [m/s]
+          double speed = std::sqrt(off_latitude*off_latitude+off_longitude*off_longitude)/time_offs;  // 角速度?  [?/s]
 
           //std::cout <<" offs:"<< offs <<std::endl;
           // フィルターより移動速度が大きい
           // ロボットの移動時に、GPSの横飛びが生じると誤判定になります。
           if(speed > filter_){
+            pub_f=false;
             speed_over_cnt_++;
             std::cout <<" over speed:"<< speed <<" speed_over_cnt_:" << speed_over_cnt_ <<std::endl;
-            if(speed_over_cnt_>=1000){
-              speed_over_cnt_=0;
-            }
-            else{
-              fix_->latitude = latitude_prev_;
-              fix_->longitude = longitude_prev_;
+            //if(speed_over_cnt_>=100){
+            //  speed_over_cnt_=0;
+            //}
+            //else{
+              //fix_->latitude = latitude_prev_;
+              //fix_->longitude = longitude_prev_;
               //fix_->altitude = altitude_prev_;
-            }
+            //}
           }
           else{
               speed_over_cnt_=0;
+              std::cout <<" speed:"<< speed <<std::endl;
           }
           time_prev_=time_now;
           latitude_prev_ = fix_->latitude;
           longitude_prev_ = fix_->longitude;
-          altitude_prev_=fix_->altitude;
+          altitude_prev_ = fix_->altitude;
         }
 
         //float64[9] position_covariance
@@ -355,7 +363,8 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
         //fix_->position_covariance[4] = position_error_model_.drift.Y()*position_error_model_.drift.Y() + position_error_model_.gaussian_noise.Y()*position_error_model_.gaussian_noise.Y();
         //fix_->position_covariance[8] = position_error_model_.drift.Z()*position_error_model_.drift.Z() + position_error_model_.gaussian_noise.Z()*position_error_model_.gaussian_noise.Z();
 
-        fix_publisher_->publish(*fix_);
+        if(pub_f==true)
+          fix_publisher_->publish(*fix_);
 
         //std::cout << " publish()" << std::endl;
 

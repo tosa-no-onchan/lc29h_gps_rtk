@@ -382,16 +382,22 @@ void Gps::checksum(std::string &data){
 * 
 */
 void Gps::callback_ntrip(const char *buffer, int size){
-  std::cout << "RTCM["<< size << "]" << std::endl;
+  if(rtk_fix_f_==false)
+    std::cout << "RTCM["<< size << "]" << std::endl;
+  else
+    std::cout << "f.RTCM["<< size << "]" << std::endl;
+
   if(boost::asio::write(*serial_, boost::asio::buffer(buffer,size)) != (std::size_t)size){
     //ROS_ERROR("Gysfdmaxb: set sampling rate error");
     std::cout << "Gysfdmaxb: send rtcm error" << std::endl;
   }
   rtcm_cnt_++;
-  if(rtcm_cnt_ >=120){
+  if(rtcm_cnt_ >= 60){
     rtcm_cnt_=0;
-    // gps 側に、 "$GNGGA" の取り込みを促す。
-    //set_ggaf_=false;
+    if(rtk_fix_f_==false){
+      // gps 側に、 "$GNGGA" の取り込みを促す。
+      set_ggaf_=false;
+    }
   }
 }
 /*

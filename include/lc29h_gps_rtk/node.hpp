@@ -129,7 +129,7 @@ class Lc29hNode{
     double latitude_;
     double longitude_;
     int speed_over_cnt_;
-    bool rtk_fix_f_;
+    //bool rtk_fix_f_;
 
 
     //rclcpp::QoS gps_qos(10);
