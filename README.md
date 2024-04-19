@@ -16,13 +16,29 @@
     $ cd ..  
     $ colcon build --symlink-install [--parallel-workers 1] --packages-select lc29h_gps_rtk  
     $ . install/setup.bash  
+#### 2. update launch param  
 
-#### 2. run on SBC(Armibian orangePi 5)  
+    $ cd launch  
+    $ mv lc29h_gps_rtk.launch.py-sample lc29h_gps_rtk.launch.py  
+  
+    edit launh.py  
+
+````  
+        # for ntrip_Client
+        DeclareLaunchArgument('ip', default_value='183.178.46.135', description=''), 
+        DeclareLaunchArgument('user', default_value='IBS', description=''),
+        DeclareLaunchArgument('passwd', default_value='IBS', description=''),
+        DeclareLaunchArgument('mountpoint', default_value='T430_32', description=''),
+        DeclareLaunchArgument('latitude', default_value='50.09', description=''),
+        DeclareLaunchArgument('longitude', default_value='8.66', description=''),
+````  
+
+#### 3. run on SBC(Armibian orangePi 5)  
 
     $ sudo chmod 777 /dev/ttyUSB0  
     $ ros2 launch lc29h_gps_rtk lc29h_gps_rtk.launch.py  
 
-#### 3. check on Remote PC  
+#### 4. check on Remote PC  
 
     $ sudo ufw disable  
     $ ros2 topic list  
