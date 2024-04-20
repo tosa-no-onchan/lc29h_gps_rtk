@@ -7,7 +7,7 @@
   PC and OrangePi 5 (Armbian and ubuntu 22.04)  
   ros2:humble  
   
-  参照: [SparkFun ZED-F9P NTRIPClient を試してみる。](http://www.netosa.com/blog/2024/04/sparkfun-zed-f9p-ntripclient.html)  
+  参照: [ROS2 LC29H-EA GPS RTK を作る。](http://www.netosa.com/blog/2024/04/ros2-lc29h-gps-rtk.html)  
 
 #### 1. down load and build.  
 
