@@ -317,7 +317,7 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
           //https://cpprefjp.github.io/reference/cmath/hypot.html
           //double speed = std::hypot(off_latitude, off_longitude, off_altitude)/time_offs;
           //double speed = std::hypot(off_latitude, off_longitude)/time_offs;  // 移動速度  [m/s]
-          double speed = std::sqrt(off_latitude*off_latitude+off_longitude*off_longitude)/time_offs;  // 角速度?  [?/s]
+          double speed = std::sqrt(off_latitude*off_latitude+off_longitude*off_longitude)/time_offs;  // 移動速度  [m/s]
 
           //std::cout <<" offs:"<< offs <<std::endl;
           // フィルターより移動速度が大きい
@@ -326,18 +326,20 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
             pub_f=false;
             speed_over_cnt_++;
             std::cout <<" over speed:"<< speed <<" speed_over_cnt_:" << speed_over_cnt_ <<std::endl;
-            //if(speed_over_cnt_>=100){
-            //  speed_over_cnt_=0;
-            //}
-            //else{
-              //fix_->latitude = latitude_prev_;
-              //fix_->longitude = longitude_prev_;
+            if(speed_over_cnt_>= 15){
+              //std::cout <<" over speed:"<< speed <<" speed_over_cnt_:" << speed_over_cnt_ <<std::endl;
+              pub_f=true;
+              speed_over_cnt_=0;
+            }
+            else{
+              fix_->latitude = latitude_prev_;
+              fix_->longitude = longitude_prev_;
               //fix_->altitude = altitude_prev_;
-            //}
+            }
           }
           else{
               speed_over_cnt_=0;
-              std::cout <<" speed:"<< speed <<std::endl;
+              //std::cout <<" speed:"<< std::setprecision(6) <<speed <<std::endl;
           }
           time_prev_=time_now;
           latitude_prev_ = fix_->latitude;
