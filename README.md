@@ -39,7 +39,8 @@
     $ sudo chmod 777 /dev/ttyUSB0  
     $ ros2 launch lc29h_gps_rtk lc29h_gps_rtk.launch.py  
     
-    f.RTCM[nn] が出たら、RTK Fix または、 RTK float OK です。  
+    f.RTCM[nn] が出たら、RTK float OK  
+    F.RTCM[nn] が出たら、 RTK Fix OK です。  
 
 #### 4. check on Remote PC  
 
