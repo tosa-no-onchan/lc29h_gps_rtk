@@ -382,10 +382,12 @@ void Gps::checksum(std::string &data){
 * 
 */
 void Gps::callback_ntrip(const char *buffer, int size){
-  if(rtk_fix_f_==false)
-    std::cout << "RTCM["<< size << "]" << std::endl;
-  else
+  if(gga_status_ == 4)
+    std::cout << "F.RTCM["<< size << "]" << std::endl;
+  else if(gga_status_ == 5)
     std::cout << "f.RTCM["<< size << "]" << std::endl;
+  else
+    std::cout << "RTCM["<< size << "]" << std::endl;
 
   if(boost::asio::write(*serial_, boost::asio::buffer(buffer,size)) != (std::size_t)size){
     //ROS_ERROR("Gysfdmaxb: set sampling rate error");
@@ -394,7 +396,7 @@ void Gps::callback_ntrip(const char *buffer, int size){
   rtcm_cnt_++;
   if(rtcm_cnt_ >= 60){
     rtcm_cnt_=0;
-    if(rtk_fix_f_==false){
+    if(gga_status_ == 0){
       // gps 側に、 "$GNGGA" の取り込みを促す。
       set_ggaf_=false;
     }

@@ -111,12 +111,16 @@ class Lc29hNode{
     std::string frame_id_;
     std::string fix_topic_;
 
+    int gga_num_;     // GGA[7] satellite num
+
     // add by nishi 2024.4.16 for gps filter
     double filter_;
     double latitude_prev_;
     double longitude_prev_;
     double altitude_prev_;
     bool first_f_;
+
+    int count_;
 
     std::chrono::time_point<std::chrono::_V2::system_clock, std::chrono::duration<long int, std::ratio<1, 1000000000>>> time_prev_;
 

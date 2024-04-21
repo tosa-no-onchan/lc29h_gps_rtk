@@ -89,8 +89,8 @@ class Gps {
 
   void init(std::shared_ptr<rclcpp::Node> node){
     node_=node;
-    // add by nishi 2024.4.19
-    rtk_fix_f_=false;
+    // add by nishi 2024.4.21
+    gga_status_=0;
   }
 
   /**
@@ -185,8 +185,9 @@ class Gps {
   libntrip::NtripClient ntrip_client_;
 
   bool set_ggaf_=false;
-  bool rtk_fix_f_;
+  //std::string rtk_fix_f_;
 
+  int gga_status_;  // GGA[6] Status
 
  private:
     bool ok;

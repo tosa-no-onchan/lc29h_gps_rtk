@@ -121,15 +121,19 @@ void Lc29hNode::getRosParams() {
 
   // Measurement rate params
   node_->declare_parameter<int>("rate",1); // [Hz]
+  node_->declare_parameter<int>("gga_num",0);
   // gps filter add by nishi 2024.4.16
-  node_->declare_parameter<double>("filter",0.0); 
+  node_->declare_parameter<double>("filter",0.0);
+  node_->declare_parameter<int>("count",0);
 
 
   node_->get_parameter<std::string>("device",device_);
   node_->get_parameter<std::string>("frame_id",frame_id_);
   node_->get_parameter<std::string>("topicName",fix_topic_);
   node_->get_parameter<int>("rate",rate_);
+  node_->get_parameter<int>("gga_num",gga_num_);
   node_->get_parameter<double>("filter",filter_);  // add by nishi 2024.4.16
+  node_->get_parameter<int>("count",count_);  // add by nishi 2024.4.20
 
   // for ntrip_client
   node_->declare_parameter<std::string>("ip",std::string("183.178.46.135"));
@@ -208,9 +212,20 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
     if (list[0] == "$GNGGA" && index < 30) {
       //std::cout << " get $GNGGA:" << std::endl;
       //std::cout << " list[6]:" << list[6] << std::endl;
+      int gga_num;
+      try{
+        gps.gga_status_=std::stoi(list[6]);
+        gga_num = std::stoi(list[7]);
+      }
+      //catch(std::invalid_argument &e){
+      catch (...){
+        gps.gga_status_=0;
+        gga_num = 0;
+      }
 
       // ステータス
-      if(list[6] != "0"){      
+      //if(list[6] != "0"){      
+      if(gps.gga_status_ != 0){      
 
         if(gps.set_ggaf_==false){
           gps.set_gga(data);
@@ -218,14 +233,16 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
         }
 
         // RTK fix まだです。
-        if(list[6] != "4" && list[6] != "5")
-          return; 
+        //if(list[6] != "4" && list[6] != "5"){
+        if(gps.gga_status_ != 4 && gps.gga_status_ != 5){
+          return;
+        }
 
-        if(gps.rtk_fix_f_==false){
-          std::cout << " $GNGGA Fix complete!! status:" << list[6] << std::endl;
-          gps.rtk_fix_f_=true;
+        if(gps.gga_status_ == 0){
+          //std::cout << " $GNGGA Fix complete!! status:" << list[6] << std::endl;
+          //gps.rtk_fix_f_=true;
           // test もう一度だけ、 gps.set_gga() を実行する。by nishi 2024.4.19
-          gps.set_ggaf_=false;
+          //gps.set_ggaf_=false;
         }
 
         bool pub_f=true;
@@ -278,73 +295,84 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
           // std::stof error
           return;
         }
-        // filter の指定があります。 add by nihsi 2024.4.16
-        if(filter_ > 0.0){
-
-          // https://www.rk-k.com/archives/6973
-          auto time_now = std::chrono::system_clock::now();
-          //std::chrono::duration<double, std::milli> time_off_mil = time_now_ - time_prev_;
-          std::chrono::duration<double> time_off_sec = time_now - time_prev_;
-
-          //std::cout << time_c_off_mil.count() << "ms" << std::endl;
-          //std::cout << time_off_sec.count() << "s" << std::endl;
-
-          double time_offs=time_off_sec.count();
-
-          //std::cout <<" time_offs:"<<time_offs <<std::endl;
-
-          if(first_f_==true){
-            first_f_=false;
-            latitude_prev_=fix_->latitude;
-            longitude_prev_=fix_->longitude;
-            altitude_prev_=fix_->altitude;
+        // RTK float です。
+        if(gps.gga_status_ == 5){
+          // RTK float のときに、衛星数のチェックをする指定です。
+          if(gga_num_ > 0){
+            //std::cout << " gga_num:" << gga_num <<std::endl;
+            if(gga_num < gga_num_){
+              std::cout << " gga_num:" << gga_num <<std::endl;
+              pub_f=false;
+            }
           }
-          // 緯度、経度の距離
-          // https://www.wingfield.gr.jp/archives/9721
-          // 自分の緯度から、上記ページの	経度1度長 (m)	緯度1度長 (m)を調べて変更して下さい。
-          // 緯度	経度1度長 (m)	緯度1度長 (m)
-          // 33	93452.8629	110904.4688	1557.5477	1848.4078	0.0000107006	0.0000090168
-          // 移動距離を計算
-          double off_latitude=(fix_->latitude - latitude_prev_) * 110904.4688;    // 距離[m]
-          //double off_latitude=(fix_->latitude - latitude_prev_);    // 角度
-          double off_longitude=(fix_->longitude - longitude_prev_) * 93452.8629;  // 距離[m]
-          //double off_longitude=(fix_->longitude - longitude_prev_);  // 角度
-          double off_altitude=fix_->altitude - altitude_prev_;
+          // RTK float のときに、filter の指定があります。 add by nihsi 2024.4.16
+          else if(filter_ > 0.0 && count_ > 0){
 
-          //std::cout <<" off_latitude:"<< off_latitude <<std::endl;
-          //std::cout <<" off_longitude:"<< off_longitude <<std::endl;
+            // https://www.rk-k.com/archives/6973
+            auto time_now = std::chrono::system_clock::now();
+            //std::chrono::duration<double, std::milli> time_off_mil = time_now_ - time_prev_;
+            std::chrono::duration<double> time_off_sec = time_now - time_prev_;
 
-          //https://cpprefjp.github.io/reference/cmath/hypot.html
-          //double speed = std::hypot(off_latitude, off_longitude, off_altitude)/time_offs;
-          //double speed = std::hypot(off_latitude, off_longitude)/time_offs;  // 移動速度  [m/s]
-          double speed = std::sqrt(off_latitude*off_latitude+off_longitude*off_longitude)/time_offs;  // 移動速度  [m/s]
+            //std::cout << time_c_off_mil.count() << "ms" << std::endl;
+            //std::cout << time_off_sec.count() << "s" << std::endl;
 
-          //std::cout <<" offs:"<< offs <<std::endl;
-          // フィルターより移動速度が大きい
-          // ロボットの移動時に、GPSの横飛びが生じると誤判定になります。
-          if(speed > filter_){
-            pub_f=false;
-            speed_over_cnt_++;
-            std::cout <<" over speed:"<< speed <<" speed_over_cnt_:" << speed_over_cnt_ <<std::endl;
-            if(speed_over_cnt_>= 15){
-              //std::cout <<" over speed:"<< speed <<" speed_over_cnt_:" << speed_over_cnt_ <<std::endl;
-              pub_f=true;
-              speed_over_cnt_=0;
+            double time_offs=time_off_sec.count();
+
+            //std::cout <<" time_offs:"<<time_offs <<std::endl;
+
+            if(first_f_==true){
+              first_f_=false;
+              latitude_prev_=fix_->latitude;
+              longitude_prev_=fix_->longitude;
+              altitude_prev_=fix_->altitude;
+            }
+            // 緯度、経度の距離
+            // https://www.wingfield.gr.jp/archives/9721
+            // 自分の緯度から、上記ページの	経度1度長 (m)	緯度1度長 (m)を調べて変更して下さい。
+            // 緯度	経度1度長 (m)	緯度1度長 (m)
+            // 33	93452.8629	110904.4688	1557.5477	1848.4078	0.0000107006	0.0000090168
+            // 移動距離を計算
+            double off_latitude=(fix_->latitude - latitude_prev_) * 110904.4688;    // 距離[m]
+            //double off_latitude=(fix_->latitude - latitude_prev_);    // 角度
+            double off_longitude=(fix_->longitude - longitude_prev_) * 93452.8629;  // 距離[m]
+            //double off_longitude=(fix_->longitude - longitude_prev_);  // 角度
+            double off_altitude=fix_->altitude - altitude_prev_;
+
+            //std::cout <<" off_latitude:"<< off_latitude <<std::endl;
+            //std::cout <<" off_longitude:"<< off_longitude <<std::endl;
+
+            //https://cpprefjp.github.io/reference/cmath/hypot.html
+            //double speed = std::hypot(off_latitude, off_longitude, off_altitude)/time_offs;
+            //double speed = std::hypot(off_latitude, off_longitude)/time_offs;  // 移動速度  [m/s]
+            double speed = std::sqrt(off_latitude*off_latitude+off_longitude*off_longitude)/time_offs;  // 移動速度  [m/s]
+
+            //std::cout <<" offs:"<< offs <<std::endl;
+            // フィルターより移動速度が大きい
+            // ロボットの移動時に、GPSの横飛びが生じると誤判定になります。
+            if(speed > filter_){
+              pub_f=false;
+              speed_over_cnt_++;
+              std::cout <<" over speed:"<< speed <<" speed_over_cnt_:" << speed_over_cnt_ << " gga_num:" << gga_num <<std::endl;
+              if(speed_over_cnt_>= count_){
+                //std::cout <<" over speed:"<< speed <<" speed_over_cnt_:" << speed_over_cnt_ <<std::endl;
+                pub_f=true;
+                speed_over_cnt_=0;
+              }
+              else{
+                fix_->latitude = latitude_prev_;
+                fix_->longitude = longitude_prev_;
+                //fix_->altitude = altitude_prev_;
+              }
             }
             else{
-              fix_->latitude = latitude_prev_;
-              fix_->longitude = longitude_prev_;
-              //fix_->altitude = altitude_prev_;
+                speed_over_cnt_=0;
+                std::cout <<" speed:"<< speed <<" gga_num:" << gga_num <<std::endl;
             }
+            time_prev_=time_now;
+            latitude_prev_ = fix_->latitude;
+            longitude_prev_ = fix_->longitude;
+            altitude_prev_ = fix_->altitude;
           }
-          else{
-              speed_over_cnt_=0;
-              //std::cout <<" speed:"<< std::setprecision(6) <<speed <<std::endl;
-          }
-          time_prev_=time_now;
-          latitude_prev_ = fix_->latitude;
-          longitude_prev_ = fix_->longitude;
-          altitude_prev_ = fix_->altitude;
         }
 
         //float64[9] position_covariance
