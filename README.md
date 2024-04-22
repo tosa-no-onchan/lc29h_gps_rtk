@@ -49,8 +49,18 @@
     /fix  
     /parameter_events  
     /rosout  
-
+    
     $ ros2 topic echo /fix  
     $ ros2 topic info /fix --verbose  
+
+#### 5. setting  
+
+  At GGA[6] (status) is 5:RTK float, You can let node to wait until GGA[7] (Numbers of satellite) value became more than gga_num value.  
+  While acutual GGA[7] value is less than gga_num value, Node will not publish sensor_msgs::msg::NavSatFix at all.  
+
+```
+        DeclareLaunchArgument('gga_num', default_value='30', description='GGA satellite num in RTK float'),   # 33:recomend , 0: no check
+```
+
 
 
