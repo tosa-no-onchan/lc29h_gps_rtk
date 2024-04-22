@@ -208,7 +208,6 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
 
     // https://ales-corp.co.jp/technical-information-nmea/    
     // $GPGGAセンテンスのみ読み込む
-    //if (list[0] == "$GPGGA") {
     if (list[0] == "$GNGGA" && index < 30) {
       //std::cout << " get $GNGGA:" << std::endl;
       //std::cout << " list[6]:" << list[6] << std::endl;
@@ -228,12 +227,12 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
       if(gps.gga_status_ != 0){      
 
         if(gps.set_ggaf_==false){
+          // gps.set_gga() を実行する。
           gps.set_gga(data);
           gps.set_ggaf_=true;
         }
 
         // RTK fix まだです。
-        //if(list[6] != "4" && list[6] != "5"){
         if(gps.gga_status_ != 4 && gps.gga_status_ != 5){
           return;
         }
@@ -372,6 +371,10 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
             latitude_prev_ = fix_->latitude;
             longitude_prev_ = fix_->longitude;
             altitude_prev_ = fix_->altitude;
+          }
+          // test by nishi 2024.4.22
+          else{
+              std::cout << " gga_num:" << gga_num <<std::endl;
           }
         }
 

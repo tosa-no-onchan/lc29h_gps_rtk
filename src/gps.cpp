@@ -396,10 +396,10 @@ void Gps::callback_ntrip(const char *buffer, int size){
   rtcm_cnt_++;
   if(rtcm_cnt_ >= 60){
     rtcm_cnt_=0;
-    if(gga_status_ == 0){
+    //if(gga_status_ == 0){
       // gps 側に、 "$GNGGA" の取り込みを促す。
       set_ggaf_=false;
-    }
+    //}
   }
 }
 /*
