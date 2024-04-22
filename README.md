@@ -65,7 +65,7 @@
 #### 6. How to  
 
   You can see node's output "gga_num:nn" in terminal. Then wait for a while about over 10 minutes.  
-  And then, although GGA[6] is 5:RTK float, LC29H-EA RTK will become fix and start to put out the correct values such as cm level. I think.   
+  And then, although GGA[6] is 5:RTK float, LC29H-EA RTK will become fix and start to put out the nearly correct values such as cm level. I think.   
   
      gga_num:nn  
      nn: 17 - 21 over   
