@@ -59,8 +59,14 @@
   While acutual GGA[7] value is less than gga_num value, Node will not publish sensor_msgs::msg::NavSatFix at all.  
 
 ```
-        DeclareLaunchArgument('gga_num', default_value='30', description='GGA satellite num in RTK float'),   # 33:recomend , 0: no check
+        DeclareLaunchArgument('gga_num', default_value='0', description='GGA satellite num in RTK float'),   # 17-30:recomend , 0: no check
 ```
 
+#### 6. How to  
 
+  You can see node's output "gga_num:nn" in terminal. Then wait for a while about over 10 minutes.  
+  And then, although GGA[6] is RTK float, LC29H-EA RTK will become fix and out put correct values such as cm level. I think.   
+  
+     gga_num:nn  
+     nn: 17 - 21 over   
 
