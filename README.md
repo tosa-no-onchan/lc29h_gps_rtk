@@ -62,11 +62,20 @@
         DeclareLaunchArgument('gga_num', default_value='0', description='GGA satellite num in RTK float'),   # 17-30:recomend , 0: no check
 ```
 
-#### 6. How to  
+#### 6. How to.  
 
-  You can see node's output "gga_num:nn" in terminal. Then wait for a while about over 10 minutes.  
-  And then, although GGA[6] is 5:RTK float, LC29H-EA RTK will become fix and start to put out the nearly correct values such as cm level. I think.   
+  You can watch node's output "gga_num:17 - 21 over" in a terminal. Since then wait for a while about from 5 to 10 minutes over.  
+  And then, although GGA[6] is 5:RTK float, LC29H-EA RTK will become to semi fix state   
+  and start to put out the nearly correct values such as cm level. I think.   
+  Please wait for it with patience.  
   
      gga_num:nn  
      nn: 17 - 21 over   
+
+  You can check with the following command ,and check whether if latitude and longitude value be fix.       
+  
+  $ ros2 topic echo /fix  
+
+  Once LC29H-EA RTK becomes to semi fix state, you can move GPS freely.  
+
 
