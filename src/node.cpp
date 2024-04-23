@@ -300,8 +300,11 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
           if(gga_num_ > 0){
             //std::cout << " gga_num:" << gga_num <<std::endl;
             if(gga_num < gga_num_){
-              std::cout << " gga_num:" << gga_num <<std::endl;
+              std::cout << " < gga_num:" << gga_num <<std::endl;
               pub_f=false;
+            }
+            else{
+              std::cout << " gga_num:" << gga_num <<std::endl;
             }
           }
           // RTK float のときに、filter の指定があります。 add by nihsi 2024.4.16

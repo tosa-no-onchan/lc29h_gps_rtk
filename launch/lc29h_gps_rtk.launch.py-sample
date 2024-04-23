@@ -35,7 +35,7 @@ def generate_launch_description():
         DeclareLaunchArgument('frame_id', default_value='gps_link', description=''),
         DeclareLaunchArgument('rate', default_value='6', description=''),
         DeclareLaunchArgument('topicName', default_value='fix', description=''),
-        DeclareLaunchArgument('gga_num', default_value='0', description='GGA satellite num in RTK float'),   # 16-30:recomend , 0: no check
+        DeclareLaunchArgument('gga_num', default_value='17', description='supress GGA satellite num in RTK float'),   # 16-33:recomend , 0: no check
         DeclareLaunchArgument('filter', default_value='0.0', description='filtered max speed'),  # robot max speed + x [m/s]
         #DeclareLaunchArgument('filter', default_value='0.6', description='filtered max speed'),  # robot max speed + x [m/s]
         DeclareLaunchArgument('count', default_value='10', description='filtered max count'),
