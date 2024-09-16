@@ -1,0 +1,91 @@
+# lc29h_gps_rtk.launch.py
+# 1. build
+#  $ colcon build --symlink-install --parallel-workers 1 --packages-select lc29h_gps_rtk
+#  $ . install/setup.bash
+#
+# 2. execute
+#  $ ros2 launch lc29h_gps_rtk lc29h_gps_rtk.launch.py
+#
+# 3. check topic
+#  $ ros2 topic info /fix --verbose
+#
+# free mount point
+# Name:	geortk.jpName:	geortk.jp
+# Address: 160.16.132.128
+#
+# free base
+# https://geortk.jp/mountpoint -> NG user/passwd が必要か?
+#
+# https://rtk.silentsystem.jp/  -> OK
+#
+#import launch
+#import launch_ros.actions
+
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, LogInfo, OpaqueFunction
+from launch.substitutions import LaunchConfiguration
+
+def generate_launch_description():
+    return LaunchDescription([
+
+        # for lc29h
+        DeclareLaunchArgument('device', default_value='/dev/ttyUSB0', description=''),
+        DeclareLaunchArgument('frame_id', default_value='gps_link', description=''),
+        DeclareLaunchArgument('rate', default_value='6', description=''),
+        DeclareLaunchArgument('topicName', default_value='fix', description=''),
+        DeclareLaunchArgument('filter', default_value='0.0', description=''),   # don't use
+
+        # for ntrip_Client
+        DeclareLaunchArgument('ip', default_value='183.178.46.135', description=''), 
+        DeclareLaunchArgument('port', default_value='2101', description=''),
+        DeclareLaunchArgument('user', default_value='IBS', description=''),
+        DeclareLaunchArgument('passwd', default_value='IBS', description=''),
+        DeclareLaunchArgument('mountpoint', default_value='T430_32', description=''),
+        DeclareLaunchArgument('latitude', default_value='50.09', description=''),
+        DeclareLaunchArgument('longitude', default_value='8.66', description=''),
+
+        Node(
+            package='lc29h_gps_rtk',
+            executable='lc29h_gps_rtk_node',
+            output="screen",
+            #emulate_tty=True,
+            parameters=[
+                        {"device": LaunchConfiguration('device') ,
+                         "frame_id": LaunchConfiguration('frame_id'),
+                         "rate": LaunchConfiguration('rate'),
+                         "topicName": LaunchConfiguration('topicName'),
+                         "filter": LaunchConfiguration('filter'),
+                         # for ntrip_client
+                         "ip": LaunchConfiguration('ip'),
+                         "port": LaunchConfiguration('port'),
+                         "user": LaunchConfiguration('user'),
+                         "passwd": LaunchConfiguration('passwd'),
+                         "mountpoint": LaunchConfiguration('mountpoint'),
+                         "latitude": LaunchConfiguration('latitude'),
+                         "longitude": LaunchConfiguration('longitude'),
+                         }
+            ]
+        )
+    ])
+
+'''
+#https://docs.ros.org/en/foxy/Tutorials/Beginner-Client-Libraries/Using-Parameters-In-A-Class-CPP.html
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+def generate_launch_description():
+    return LaunchDescription([
+        Node(
+            package="cpp_parameters",
+            executable="minimal_param_node",
+            name="custom_minimal_param_node",
+            output="screen",
+            emulate_tty=True,
+            parameters=[
+                {"my_parameter": "earth"}
+            ]
+        )
+    ])
+'''
