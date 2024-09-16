@@ -120,7 +120,7 @@ void Lc29hNode::getRosParams() {
   set_usb_ = false;
 
   // Measurement rate params
-  node_->declare_parameter<int>("rate",1); // [Hz]
+  node_->declare_parameter<int>("rate",5); // [Hz]
   node_->declare_parameter<int>("gga_num",0);
   // gps filter add by nishi 2024.4.16
   node_->declare_parameter<double>("filter",0.0);
@@ -225,7 +225,7 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
       // ステータス
       //if(list[6] != "0"){      
       if(gps.gga_status_ != 0){      
-
+        // ntrip server 用 gga を更新する。
         if(gps.set_ggaf_==false){
           // gps.set_gga() を実行する。
           gps.set_gga(data);
@@ -328,7 +328,7 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
               longitude_prev_=fix_->longitude;
               altitude_prev_=fix_->altitude;
             }
-            // 緯度、経度の距離
+            // 緯度(北緯 latitude)、経度(東経 longitude)の距離
             // https://www.wingfield.gr.jp/archives/9721
             // 自分の緯度から、上記ページの	経度1度長 (m)	緯度1度長 (m)を調べて変更して下さい。
             // 緯度	経度1度長 (m)	緯度1度長 (m)

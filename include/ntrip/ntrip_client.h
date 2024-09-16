@@ -80,8 +80,9 @@ class NtripClient {
     longitude_ = longitude;
   }
   // 设置GGA上报时间间隔, 单位秒(s).
-  void set_report_interval(int intv) {
+  void set_report_interval(int intv,int intv_recv=1000) {
     report_interval_ = intv;
+    intv_recv_=intv_recv;
   }
 
   // 设置接收到数据时的回调函数.
@@ -101,7 +102,8 @@ class NtripClient {
 
   std::atomic_bool service_is_running_ = {false};
   std::atomic_bool gga_is_update_ = {false};  // 外部更新GGA数据标志.
-  int report_interval_ = 1;  // GGA数据上报时间间隔.
+  int report_interval_ = 1;  // GGA数据上报时间间隔. [sec]
+  int intv_recv_; // recevied interval [ms]
   double latitude_ = 22.570535;  // 固定坐标纬度.
   double longitude_ = 113.937739;  // 固定坐标经度.
   std::string server_ip_;

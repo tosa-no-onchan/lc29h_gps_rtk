@@ -186,7 +186,22 @@ void Gps::initializeSerial(std::string port, unsigned int baudrate,
 
       boost::this_thread::sleep(
             boost::posix_time::milliseconds(kSetBaudrateSleepMs));
+    #endif
 
+    //#define RESTORE_DEFAULT
+    #if defined(RESTORE_DEFAULT)
+      std::string s_restore_def="$PQTMRESTOREPAR*13";
+      if(boost::asio::write(*serial_, boost::asio::buffer(s_restore_def)) != s_restore_def.length()){
+        //RCLCPP_ERROR(node_->get_logger(),"Lc29h: set output rate error");
+        std::cout << "Lc29h: restore default error" << std::endl;
+        return;
+      }
+
+    #endif
+
+
+    //#define SET_OUTPUT_RATE
+    #if defined(SET_OUTPUT_RATE)
       // set samplling rate 2[Hz]
       //std::string s_sample_rate = "$PMTK220,500*2B\r\n";
       // set samplling rate 4[Hz]
@@ -196,31 +211,51 @@ void Gps::initializeSerial(std::string port, unsigned int baudrate,
       // set samplling rate 6[Hz]
       //std::string s_sample_rate = "$PMTK220,166*2F\r\n";
 
-      //ROS_INFO("Gysfdmaxb: set sampling rate %d",rate_);
-      RCLCPP_INFO(node_->get_logger(),"Lc29h: set sampling rate %d",rate_);
-      //std::cout << "Gysfdmaxb: set sampling rate" << rate_ << std::endl;
+      //RCLCPP_INFO(node_->get_logger(),"Lc29h: set outpuy rate %d",rate_);
+      std::cout << "Lc29h: set output rate:" << rate_ << std::endl;
 
-      std::string s_sample_rate = "$PMTK220,"+std::to_string(meas_rate_);
+      std::string s_sample_rate = "$PQTMCFGFIXRATE,W,"+std::to_string(meas_rate_);
       checksum(s_sample_rate);
-      //std::cout << s_sample_rate << std::endl;
+      std::cout << s_sample_rate << std::endl;
 
       if(boost::asio::write(*serial_, boost::asio::buffer(s_sample_rate)) != s_sample_rate.length()){
-        //ROS_ERROR("Gysfdmaxb: set sampling rate error");
-        RCLCPP_ERROR(node_->get_logger(),"Lc29h: set sampling rate error");
-        //std::cout << "Gysfdmaxb: set sampling rate error" << std::endl;
+        //RCLCPP_ERROR(node_->get_logger(),"Lc29h: set output rate error");
+        std::cout << "Lc29h: set output rate error" << std::endl;
         return;
       }
-    #endif
 
-    boost::this_thread::sleep(
+      //#define TEST_XCX
+      #if defined(TEST_XCX)
+
+      boost::this_thread::sleep(
+            boost::posix_time::milliseconds(kSetBaudrateSleepMs));
+
+      std::string s_save_parm1="$PAIR513*3D";
+      if(boost::asio::write(*serial_, boost::asio::buffer(s_save_parm1)) != s_save_parm1.length()){
+        //RCLCPP_ERROR(node_->get_logger(),"Lc29h: set output rate error");
+        std::cout << "Lc29h: save_parm1 error" << std::endl;
+        return;
+      }
+
+      boost::this_thread::sleep(
           boost::posix_time::milliseconds(kSetBaudrateSleepMs));
 
+      std::string s_save_parm2="$PQTMSAVEPAR*5A";
+      if(boost::asio::write(*serial_, boost::asio::buffer(s_save_parm2)) != s_save_parm2.length()){
+        //RCLCPP_ERROR(node_->get_logger(),"Lc29h: set output rate error");
+        std::cout << "Lc29h: save_parm2 error" << std::endl;
+        return;
+      }
+      #endif
+      boost::this_thread::sleep(
+            boost::posix_time::milliseconds(kSetBaudrateSleepMs));
+
+    #endif
     // テキトウに2秒待つ
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
-    //ROS_INFO("Gysfdmaxb: set option end");
-    RCLCPP_INFO(node_->get_logger(),"Lc29h: set option end");
-    //std::cout << "Gysfdmaxb: set option end" << std::endl;
+    //RCLCPP_INFO(node_->get_logger(),"Lc29h: set option end");
+    std::cout << "Lc29h: set option end" << std::endl;
 
   #endif
 
@@ -457,7 +492,9 @@ void Gps::initializeNtripClient(std::string ip,int port,std::string user,std::st
 
   //  void set_location(double latitude, double longitude)
   ntrip_client_.set_location(latitude,longitude);
-  ntrip_client_.set_report_interval(1);
+  //ntrip_client_.set_report_interval(1);
+  // changed by nishi 2024.9.14
+  ntrip_client_.set_report_interval(5);
   ntrip_client_.Run();
   std::this_thread::sleep_for(std::chrono::seconds(1));  // Maybe take longer?
 

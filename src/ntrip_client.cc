@@ -270,7 +270,10 @@ void NtripClient::Stop(void) {
 //
 // Private method.
 //
-
+// https://cpprefjp.github.io/reference/chrono/steady_clock.html
+// https://jp-seemore.com/iot/26755/
+// https://programdoria.com/programming/cpp/milliseconds_today/
+//
 void NtripClient::ThreadHandler(void) {
   //std::cout << ">> start NtripClient::ThreadHandler()" << std::endl;
 
@@ -278,42 +281,59 @@ void NtripClient::ThreadHandler(void) {
   int ret;
   std::unique_ptr<char[]> buffer(
       new char[kBufferSize], std::default_delete<char[]>());
+
   auto tp_beg = std::chrono::steady_clock::now();
   auto tp_end = tp_beg;
+  auto tp_rcv_beg = tp_beg;
+  auto tp_rcv_end = tp_beg;
   int intv_ms = report_interval_ * 1000;
+  //auto intv_ms = std::chrono::milliseconds(report_interval_ * 1000);
+  //auto intv_req_ms = std::chrono::milliseconds(intv_recv_);
   int receive_timeout_cnt = kReceiveTimeoutPeriod;
 
   //printf("NtripClient service running...\r\n");
   std::cout << "NtripClient service running..." << std::endl;
   while (service_is_running_.load()) {
-    ret = recv(socket_fd_, buffer.get(), kBufferSize, 0);
-    //std::cout << " recv() ret="<< ret << std::endl;
-    if (ret == 0) {
-      //printf("Remote socket close!!!\r\n");
-      std::cout << "Remote socket close!!!"<< std::endl;
-      break;
-    } 
-    else if (ret < 0) {
-      if ((errno != 0) && (errno != EAGAIN) &&
-          (errno != EWOULDBLOCK) && (errno != EINTR)) {
-        //printf("Remote socket error, errno=%d\r\n", errno);
-        std::cout << "Remote socket error, errno="<< errno << std::endl;
+    tp_rcv_end = std::chrono::steady_clock::now();
+    // intv_recv_[ms] 間隔で、Server に request する。
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(
+        tp_rcv_end-tp_rcv_beg).count() >= intv_recv_) {
+
+      //std::cout << " recv()"<< std::endl;     
+      ret = recv(socket_fd_, buffer.get(), kBufferSize, 0);
+      //std::cout << " recv() ret="<< ret << std::endl;
+      if (ret == 0) {
+        //printf("Remote socket close!!!\r\n");
+        std::cout << "Remote socket close!!!"<< std::endl;
         break;
+      } 
+      else if (ret < 0) {
+        if ((errno != 0) && (errno != EAGAIN) &&
+            (errno != EWOULDBLOCK) && (errno != EINTR)) {
+          //printf("Remote socket error, errno=%d\r\n", errno);
+          std::cout << "Remote socket error, errno="<< errno << std::endl;
+          break;
+        }
+      } 
+      else {
+        receive_timeout_cnt = kReceiveTimeoutPeriod;
+        callback_(buffer.get(), ret);
+        if (ret == kBufferSize) continue;
       }
-    } 
-    else {
-      receive_timeout_cnt = kReceiveTimeoutPeriod;
-      callback_(buffer.get(), ret);
-      if (ret == kBufferSize) continue;
+      tp_rcv_beg=std::chrono::steady_clock::now();
     }
     tp_end = std::chrono::steady_clock::now();
+    // report_interval_[ms] 間隔で、Server に request する。
     if (std::chrono::duration_cast<std::chrono::milliseconds>(
         tp_end-tp_beg).count() >= intv_ms) {
-      if (receive_timeout_cnt-- <= 0) break;
+      // 連続して time out 3 回で、終了みたい。 -> これは、将来はどうか? by nishi 2024.9.14
+      if (receive_timeout_cnt-- <= 0) 
+        break;
       tp_beg = std::chrono::steady_clock::now();
       if (!gga_is_update_.load()) {
         GGAFrameGenerate(latitude_, longitude_, 10.0, &gga_buffer_);
       }
+      std::cout << " send()"<< std::endl;     
       send(socket_fd_, gga_buffer_.c_str(), gga_buffer_.size(), 0);
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
