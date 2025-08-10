@@ -87,6 +87,7 @@
 
     2052.8.10 Fix bug.  
     Fix how to convert NMEA to decimal latitude,longitude.   
+    From google AI.  
     To convert NMEA coordinates (degrees, minutes, and decimal minutes) to decimal degrees for latitude and longitude,  
     you need to divide the minutes portion by 60 and add it to the degrees.  
     For example, a latitude of N 3405.5678 would be converted to 34 + (5.5678/60) = 34.092797 degrees North.  
