@@ -2,7 +2,6 @@
 #define LC29H_GPS_NODE_HPP
 
 
-
 // ROS includes
 //#include <ros/ros.h>
 #include <rclcpp/rclcpp.hpp>
@@ -19,7 +18,12 @@
 //#include <ctime>
 #include <iostream>
 
+#include <string>
+#include <limits> // for numeric_limits
+
+
 //using sensor_msgs::msg::NavSatFix;
+
 
 
 namespace lc29h_gps {

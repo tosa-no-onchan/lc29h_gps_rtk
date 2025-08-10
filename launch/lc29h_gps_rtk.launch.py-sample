@@ -33,9 +33,11 @@ def generate_launch_description():
         # for lc29h
         DeclareLaunchArgument('device', default_value='/dev/ttyUSB0', description=''),
         DeclareLaunchArgument('frame_id', default_value='gps_link', description=''),
-        DeclareLaunchArgument('rate', default_value='6', description=''),
+        DeclareLaunchArgument('rate', default_value='1', description=''),
         DeclareLaunchArgument('topicName', default_value='fix', description=''),
+        DeclareLaunchArgument('gga_num', default_value='17', description='supress GGA satellite num in RTK float'),   # 16-33:recomend , 0: no check
         DeclareLaunchArgument('filter', default_value='0.0', description=''),   # don't use
+        DeclareLaunchArgument('count', default_value='10', description='filtered max count'),
 
         # for ntrip_Client
         DeclareLaunchArgument('ip', default_value='183.178.46.135', description=''), 
@@ -56,7 +58,9 @@ def generate_launch_description():
                          "frame_id": LaunchConfiguration('frame_id'),
                          "rate": LaunchConfiguration('rate'),
                          "topicName": LaunchConfiguration('topicName'),
+                         "gga_num": LaunchConfiguration('gga_num'),
                          "filter": LaunchConfiguration('filter'),
+                         "count": LaunchConfiguration('count'),
                          # for ntrip_client
                          "ip": LaunchConfiguration('ip'),
                          "port": LaunchConfiguration('port'),
