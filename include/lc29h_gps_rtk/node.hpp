@@ -106,6 +106,9 @@ class Lc29hNode{
     //! If true, set configure the User-Defined Datum
     bool set_dat_;
 
+        // add by nishi 2025.8.12
+    bool use_dgns_;
+
     //gysfdmaxbProduct product;
 
     std::shared_ptr<rclcpp::Node> node_;

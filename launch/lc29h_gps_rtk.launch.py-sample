@@ -38,6 +38,7 @@ def generate_launch_description():
         DeclareLaunchArgument('gga_num', default_value='17', description='supress GGA satellite num in RTK float'),   # 16-33:recomend , 0: no check
         DeclareLaunchArgument('filter', default_value='0.0', description=''),   # don't use
         DeclareLaunchArgument('count', default_value='10', description='filtered max count'),
+        DeclareLaunchArgument('use_dgns', default_value='false', description=''),
 
         # for ntrip_Client
         DeclareLaunchArgument('ip', default_value='183.178.46.135', description=''), 
@@ -61,6 +62,7 @@ def generate_launch_description():
                          "gga_num": LaunchConfiguration('gga_num'),
                          "filter": LaunchConfiguration('filter'),
                          "count": LaunchConfiguration('count'),
+                         "use_dgns": LaunchConfiguration('use_dgns'),
                          # for ntrip_client
                          "ip": LaunchConfiguration('ip'),
                          "port": LaunchConfiguration('port'),

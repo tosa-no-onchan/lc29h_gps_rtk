@@ -125,17 +125,19 @@ void Lc29hNode::getRosParams() {
   set_usb_ = false;
 
   // Measurement rate params
-  node_->declare_parameter<int>("rate",5); // [Hz]
+  node_->declare_parameter<int>("rate",1); // [Hz]
+  // add by nishi 2025.8.12
+  node_->declare_parameter<bool>("use_dgns",true);
   node_->declare_parameter<int>("gga_num",0);
   // gps filter add by nishi 2024.4.16
   node_->declare_parameter<double>("filter",0.0);
   node_->declare_parameter<int>("count",0);
 
-
   node_->get_parameter<std::string>("device",device_);
   node_->get_parameter<std::string>("frame_id",frame_id_);
   node_->get_parameter<std::string>("topicName",fix_topic_);
   node_->get_parameter<int>("rate",rate_);
+  node_->get_parameter<bool>("use_dgns",use_dgns_);
   node_->get_parameter<int>("gga_num",gga_num_);
   node_->get_parameter<double>("filter",filter_);  // add by nishi 2024.4.16
   node_->get_parameter<int>("count",count_);  // add by nishi 2024.4.20
@@ -237,9 +239,12 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
           gps.set_ggaf_=true;
         }
 
+        std::cout << "GGA.status:" << gps.gga_status_ << std::endl;
+
         // RTK fix まだです。
         if(gps.gga_status_ != 4 && gps.gga_status_ != 5){
-          return;
+          if(gps.gga_status_ != 2 && use_dgns_==true)
+            return;
         }
 
         if(gps.gga_status_ == 0){
