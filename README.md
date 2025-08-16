@@ -85,7 +85,7 @@
 
 #### 7. Update.  
 
-    2052.8.10 Fix bug.  
+    2025.8.10 Fix bug.  
     Fix how to convert NMEA to decimal latitude,longitude.   
     From google AI.  
     To convert NMEA coordinates (degrees, minutes, and decimal minutes) to decimal degrees for latitude and longitude,  
