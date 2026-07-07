@@ -102,7 +102,7 @@
 
 
 #### 8. NavsatFix 受信 tool.  
-python で、NavSatFix をsubscribe して、誤差、精度判定と /odom トピックを、publish する。  
+python で、NavSatFix をsubscribe して、誤差、精度判定と /gps_pose トピックを、publish する。  
 
     $ ros2 launch lc29h_gps_rtk lc29h_gps_rtk.launch.py  
     $ ros2 run lc29h_gps_rtk navsat_validator.py  
