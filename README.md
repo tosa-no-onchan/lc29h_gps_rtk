@@ -99,3 +99,11 @@
     GNGGA の status に応じた、分散（標準偏差の2乗）を ROS 2メッセージに設定するようにしました。  
     これで、robot_localization/navsat_transform_node から robot_localization/ekf_node、robot_localization/ukf_node に誤差情報が  
     渡されて、不要な動きのフィルタリングに活用されます。  
+
+
+#### 8. NavsatFix 受信 tool.  
+python で、NavSatFix をsubscribe して、誤差、精度判定と /odom トピックを、publish する。  
+
+    $ ros2 launch lc29h_gps_rtk lc29h_gps_rtk.launch.py  
+    $ ros2 run lc29h_gps_rtk navsat_validator.py  
+    rviz2 で、 /gps_pose を、add すれば、目視チェックできます。  
