@@ -93,6 +93,7 @@
     For example, a latitude of N 3405.5678 would be converted to 34 + (5.5678/60) = 34.092797 degrees North.  
     Similarly, a longitude of E 11807.1234 would be converted to 118 + (7.1234/60) = 118.118723 degrees East  
     Use double to convert NMEA to latitude and longitude.
+  
 
     2026.7.7 NavSatFix の 誤差（共分散) のチェックに対応しました。  
     GNGGA の status に応じた、分散（標準偏差の2乗）を ROS 2メッセージに設定するようにしました。  
