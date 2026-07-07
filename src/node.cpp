@@ -10,11 +10,9 @@
 #include "lc29h_gps_rtk/node.hpp"
 
 using namespace lc29h_gps;
-
 using namespace boost::placeholders;
 
 //#define USE_BUNKAI
-
 #if defined(USE_BUNKAI)
 // NMEAの緯度経度を「度分秒」(DMS)の文字列に変換する
 std::string NMEA2DMS(float val) {
@@ -55,19 +53,13 @@ std::string UTC2GMT900(std::string str) {
 
 //------------------------
 // lc29h ROS2 Node
-//------------------------   
-//GysfdmaxbNode::GysfdmaxbNode(rclcpp::NodeOptions const & options)
-//: rclcpp::Node{"gysfdmaxb_gps", options}
-//{
-//  //init();
-//}
-
+//------------------------
 void Lc29hNode::init(std::shared_ptr<rclcpp::Node> node) {
-
   node_=node;
   gps.init(node_);
 
   first_f_=true;
+  gnrmc_fix_=false;   // add by nishi 2026.7.4
 
   // Params must be set before initializing IO
   getRosParams();
@@ -110,11 +102,8 @@ void Lc29hNode::init(std::shared_ptr<rclcpp::Node> node) {
 
 void Lc29hNode::initializeIo(){
   gps.setConfigOnStartup(config_on_startup_flag_);
-
   gps.initializeSerial(device_, baudrate_, uart_in_, uart_out_,rate_);
-
   gps.initializeNtripClient(ip_,port_,user_,passwd_,mountpoint_,latitude_,longitude_);
-
 }
 
 void Lc29hNode::getRosParams() {
@@ -177,16 +166,6 @@ void Lc29hNode::getRosParams() {
 // subscribe GPS nmea data and Publish
 //------------------------------------
 void Lc29hNode::publish_nmea_str(std::string& data) {
-  //static ros::Publisher publisher = nh->advertise<nmea_msgs::Sentence>(topic,
-  //                                                          kROSQueueSize);
-  //nmea_msgs::Sentence m;
-  //m.header.stamp = ros::Time::now();
-  //m.header.frame_id = frame_id;
-  //m.sentence = sentence;
-  //publisher.publish(m);
-  
-  //std::cout << ">>> called publish_nmea_str() \n" << data << std::endl;
-  //std::cout <<  data << std::endl;
 
   if(data != ""){
     int i, index = 0, len = data.length();
@@ -200,7 +179,6 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
       list[i] = "";
     }
 
-
     // 「,」を区切り文字として文字列を配列にする
     for (i = 0; i < len; i++) {
       if (data[i] == ',') {
@@ -212,6 +190,19 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
       }
       str += data[i];
     }
+
+    // $GNRMC をチェックします add by nishi 2026.7.4
+    # if defined(USE_GNPRMC)
+      if( list[0] =="$GNRMC"){
+        // Fix しています
+        if(list[12] =="F"){
+          gnrmc_fix_=true;
+        }
+        else{
+          gnrmc_fix_=false;
+        }
+      }
+    #endif
 
     // https://ales-corp.co.jp/technical-information-nmea/    
     // $GPGGAセンテンスのみ読み込む
@@ -229,9 +220,54 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
         gga_num = 0;
       }
 
-      // ステータス
+      # if defined(USE_GNPRMC)
+        // $GNRMC が、 Fix しています!!
+        if(gps.gga_status_==5 && gnrmc_fix_==true){
+          gps.gga_status_=4;
+          std::cout << "Force set GGA.status:" << gps.gga_status_ << std::endl;
+        }
+      #endif
+
+      // GGA ステータス
+      // gps.gga_status_: 0=測位不能、1=単独測位、2=DGPS、4=RTK fix、5=RTK float、6=デッドレコニング
+      std::cout << "GGA.status:" << gps.gga_status_ << std::endl;
+
       //if(list[6] != "0"){      
-      if(gps.gga_status_ != 0){      
+      if(gps.gga_status_ != 0){
+
+        //#define DEBUG_CHECK_NMEA
+        double lati,longi;
+        double altitude,latitude,longitude;
+        try{
+          //fix_->latitude  = std::stod(list[2])/100.0;  // 緯度
+          //fix_->longitude = std::stod(list[4])/100.0;  // 経度
+          //fix_->altitude  = std::stod(list[9]);  // 高度、海抜
+          altitude  = std::stod(list[9]);  // 高度、海抜
+          // chnaged by nishi 2025.8.9
+          lati  = std::stod(list[2]);  // 緯度
+          longi = std::stod(list[4]);  // 経度
+
+          #if defined(DEBUG_CHECK_NMEA)
+            std::cout <<"NMEA lat:"<<list[2] <<" longi:"<< list[4] <<std::endl;
+            std::cout <<"lati:"<< std::fixed << std::setprecision(8) << lati << " longi:"<< std::fixed << std::setprecision(8) << longi << std::endl;
+          #endif
+          double lati_m = std::fmod(lati,100.0)/60.0;
+          double longi_m = std::fmod(longi,100.0)/60.0;
+
+          //fix_->latitude = std::floor(lati/100.0) + lati_m;   // 緯度
+          //fix_->longitude = std::floor(longi/100.0) + longi_m;  // 経度
+          latitude = std::floor(lati/100.0) + lati_m;   // 緯度
+          longitude = std::floor(longi/100.0) + longi_m;  // 経度
+
+          #if defined(DEBUG_CHECK_NMEA)
+            std::cout <<"latitude:"<< std::fixed << std::setprecision(10) << latitude << " longitude:"<< longitude << std::endl;
+          #endif
+        }
+        catch (...){
+          // std::stof error
+          return;
+        }
+
         // ntrip server 用 gga を更新する。
         if(gps.set_ggaf_==false){
           // gps.set_gga() を実行する。
@@ -239,26 +275,38 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
           gps.set_ggaf_=true;
         }
 
-        std::cout << "GGA.status:" << gps.gga_status_ << std::endl;
-
-        // RTK fix まだです。
-        if(gps.gga_status_ != 4 && gps.gga_status_ != 5){
-          if(gps.gga_status_ != 2 && use_dgns_==true)
-            return;
-        }
-
-        if(gps.gga_status_ == 0){
-          //std::cout << " $GNGGA Fix complete!! status:" << list[6] << std::endl;
-          //gps.rtk_fix_f_=true;
-          // test もう一度だけ、 gps.set_gga() を実行する。by nishi 2024.4.19
-          //gps.set_ggaf_=false;
-        }
-
         bool pub_f=true;
         // set up Ros Publish part
         fix_ =std::make_shared<sensor_msgs::msg::NavSatFix>();
-        //fix_.status.status  = sensor_msgs::NavSatStatus::STATUS_FIX;
-        fix_->status.status  = sensor_msgs::msg::NavSatStatus::STATUS_FIX;
+        //fix_->status.status  = sensor_msgs::msg::NavSatStatus::STATUS_FIX;
+        // update 2026.6.29 by nishi
+        // fix_->status.status を実際に即した値にします。
+        // NMEA $GNGGA のステータス(list[6])に応じてROS 2のステータスを厳格に打ち分ける
+        // gps.gga_status_ : 1=単独, 2=DGPS, 4=RTK-Fix, 5=RTK-Float, 0=未測位(屋内など)
+        if (gps.gga_status_ == 4) {
+            // 【屋外・超高精度】RTK-Fix状態
+            fix_->status.status = sensor_msgs::msg::NavSatStatus::STATUS_GBAS_FIX; // 2
+        } 
+        else if (gps.gga_status_ == 5) {
+            // 【屋外・環境による】RTK-Float状態
+            // もし「Floatも完全に弾きたい（Fixのみ信頼する）」場合は、ここも STATUS_NO_FIX にしてください。
+            // 今回は「Floatも一応通す（あとはUKFのマハラノビス距離に任せる）」形にしています。
+            fix_->status.status = sensor_msgs::msg::NavSatStatus::STATUS_GBAS_FIX; // 2
+        }
+        else if (gps.gga_status_ == 1 || gps.gga_status_ == 2) {
+            // 通常の単独測位 / DGPS
+            fix_->status.status = sensor_msgs::msg::NavSatStatus::STATUS_FIX; // 0
+        } 
+        else {
+            // 【屋内など】測位不可、または異常値
+            // これを設定すると navsat_transform_node や UKF は自動的にこのデータを無視します。
+            fix_->status.status = sensor_msgs::msg::NavSatStatus::STATUS_NO_FIX; // -1
+        }
+
+        fix_->altitude  = altitude;
+        fix_->latitude = latitude;   // 緯度
+        fix_->longitude = longitude;  // 経度
+
         fix_->status.service = 0;
 
         fix_->header.frame_id = frame_id_;
@@ -297,118 +345,17 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
 
         fix_->header.stamp = node_->now();
 
-        double lati,longi;
-        try{
-          //fix_->latitude  = std::stod(list[2])/100.0;  // 緯度
-          //fix_->longitude = std::stod(list[4])/100.0;  // 経度
-          fix_->altitude  = std::stod(list[9]);  // 高度、海抜
-          // chnaged by nishi 2025.8.9
-          lati  = std::stod(list[2]);  // 緯度
-          longi = std::stod(list[4]);  // 経度
-
-          //#define DEBUG_CHECK_NMEA
-          #if defined(DEBUG_CHECK_NMEA)
-            std::cout <<"NMEA lat:"<<list[2] <<" longi:"<< list[4] <<std::endl;
-            std::cout <<"lati:"<< std::fixed << std::setprecision(8) << lati << " longi:"<< std::fixed << std::setprecision(8) << longi << std::endl;
-          #endif
-          double lati_m = std::fmod(lati,100.0)/60.0;
-          double longi_m = std::fmod(longi,100.0)/60.0;
-
-          fix_->latitude = std::floor(lati/100.0) + lati_m;   // 緯度
-          fix_->longitude = std::floor(longi/100.0) + longi_m;  // 経度
-
-          #if defined(DEBUG_CHECK_NMEA)
-            std::cout <<"fix_->latitude:"<< std::fixed << std::setprecision(10) << fix_->latitude << " fix_->longitude:"<< fix_->longitude << std::endl;
-          #endif
-        }
-        catch (...){
-          // std::stof error
-          return;
-        }
-        // RTK float です。
-        if(gps.gga_status_ == 5){
+        if(gps.gga_status_ != 4){
           // RTK float のときに、衛星数のチェックをする指定です。
           if(gga_num_ > 0){
             //std::cout << " gga_num:" << gga_num <<std::endl;
             if(gga_num < gga_num_){
               std::cout << " < gga_num:" << gga_num <<std::endl;
-              pub_f=false;
+              //pub_f=false;
             }
             else{
               std::cout << " gga_num:" << gga_num <<std::endl;
             }
-          }
-          // RTK float のときに、filter の指定があります。 add by nihsi 2024.4.16
-          else if(filter_ > 0.0 && count_ > 0){
-
-            // https://www.rk-k.com/archives/6973
-            auto time_now = std::chrono::system_clock::now();
-            //std::chrono::duration<double, std::milli> time_off_mil = time_now_ - time_prev_;
-            std::chrono::duration<double> time_off_sec = time_now - time_prev_;
-
-            //std::cout << time_c_off_mil.count() << "ms" << std::endl;
-            //std::cout << time_off_sec.count() << "s" << std::endl;
-
-            double time_offs=time_off_sec.count();
-
-            //std::cout <<" time_offs:"<<time_offs <<std::endl;
-
-            if(first_f_==true){
-              first_f_=false;
-              latitude_prev_=fix_->latitude;
-              longitude_prev_=fix_->longitude;
-              altitude_prev_=fix_->altitude;
-            }
-            // 緯度(北緯 latitude)、経度(東経 longitude)の距離
-            // https://www.wingfield.gr.jp/archives/9721
-            // 自分の緯度から、上記ページの	経度1度長 (m)	緯度1度長 (m)を調べて変更して下さい。
-            // 緯度	経度1度長 (m)	緯度1度長 (m)
-            // 33	93452.8629	110904.4688	1557.5477	1848.4078	0.0000107006	0.0000090168
-            // 移動距離を計算
-            double off_latitude=(fix_->latitude - latitude_prev_) * 110904.4688;    // 距離[m]
-            //double off_latitude=(fix_->latitude - latitude_prev_);    // 角度
-            double off_longitude=(fix_->longitude - longitude_prev_) * 93452.8629;  // 距離[m]
-            //double off_longitude=(fix_->longitude - longitude_prev_);  // 角度
-            double off_altitude=fix_->altitude - altitude_prev_;
-
-            //std::cout <<" off_latitude:"<< off_latitude <<std::endl;
-            //std::cout <<" off_longitude:"<< off_longitude <<std::endl;
-
-            //https://cpprefjp.github.io/reference/cmath/hypot.html
-            //double speed = std::hypot(off_latitude, off_longitude, off_altitude)/time_offs;
-            //double speed = std::hypot(off_latitude, off_longitude)/time_offs;  // 移動速度  [m/s]
-            double speed = std::sqrt(off_latitude*off_latitude+off_longitude*off_longitude)/time_offs;  // 移動速度  [m/s]
-
-            //std::cout <<" offs:"<< offs <<std::endl;
-            // フィルターより移動速度が大きい
-            // ロボットの移動時に、GPSの横飛びが生じると誤判定になります。
-            if(speed > filter_){
-              pub_f=false;
-              speed_over_cnt_++;
-              std::cout <<" over speed:"<< speed <<" speed_over_cnt_:" << speed_over_cnt_ << " gga_num:" << gga_num <<std::endl;
-              if(speed_over_cnt_>= count_){
-                //std::cout <<" over speed:"<< speed <<" speed_over_cnt_:" << speed_over_cnt_ <<std::endl;
-                pub_f=true;
-                speed_over_cnt_=0;
-              }
-              else{
-                fix_->latitude = latitude_prev_;
-                fix_->longitude = longitude_prev_;
-                //fix_->altitude = altitude_prev_;
-              }
-            }
-            else{
-                speed_over_cnt_=0;
-                std::cout <<" speed:"<< speed <<" gga_num:" << gga_num <<std::endl;
-            }
-            time_prev_=time_now;
-            latitude_prev_ = fix_->latitude;
-            longitude_prev_ = fix_->longitude;
-            altitude_prev_ = fix_->altitude;
-          }
-          // test by nishi 2024.4.22
-          else{
-              std::cout << " gga_num:" << gga_num <<std::endl;
           }
         }
 
@@ -424,16 +371,52 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
         //uint8 COVARIANCE_TYPE_KNOWN = 3
         //uint8 position_covariance_type
 
-        fix_->position_covariance_type = sensor_msgs::msg::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
+        //fix_->position_covariance_type = sensor_msgs::msg::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
 
         //fix_->position_covariance[0] = position_error_model_.drift.X()*position_error_model_.drift.X() + position_error_model_.gaussian_noise.X()*position_error_model_.gaussian_noise.X();
         //fix_->position_covariance[4] = position_error_model_.drift.Y()*position_error_model_.drift.Y() + position_error_model_.gaussian_noise.Y()*position_error_model_.gaussian_noise.Y();
         //fix_->position_covariance[8] = position_error_model_.drift.Z()*position_error_model_.drift.Z() + position_error_model_.gaussian_noise.Z()*position_error_model_.gaussian_noise.Z();
 
+        // --- [ここから追加・修正] HDOPから共分散（誤差）を疑似計算する処理 ---
+        // $GNGGA[8]
+        double hdop = 1.0; // デフォルト値
+        try {
+          if (!list[8].empty()) {
+            hdop = std::stod(list[8]); // カンマ8番目のHDOPを取得
+          }
+        }
+        catch (...) {
+          hdop = 1.0; // パース失敗時は安全のため1.0とする
+        }
+
+        // 測位状態に応じたベース精度（メートル）の設定
+        double base_accuracy = 1.0; 
+        if (gps.gga_status_ == 4) {
+          base_accuracy = 0.02; // RTK-Fixならベース精度は約2cm
+        } 
+        else if (gps.gga_status_ == 5) {
+          base_accuracy = 0.20; // RTK-Floatならベース精度は約20cm
+        } 
+        else {
+          base_accuracy = 2.0;  // 単独測位などの場合は約2.0m
+        }
+
+        // 水平方向の標準偏差（誤差メートル）を算出
+        double horizontal_std_dev = hdop * base_accuracy;
+        // 高度方向は一般的に水平の1.5〜2倍程度大きくなるため
+        double vertical_std_dev = horizontal_std_dev * 2.0; 
+
+        // 分散（標準偏差の2乗）をROS 2メッセージにセット
+        fix_->position_covariance[0] = horizontal_std_dev * horizontal_std_dev; // 経度(東)の分散
+        fix_->position_covariance[4] = horizontal_std_dev * horizontal_std_dev; // 緯度(北)の分散
+        fix_->position_covariance[8] = vertical_std_dev * vertical_std_dev;     // 高度(上)の分散
+
+        // 対角成分（0, 4, 8番目）をセットしたことを示すタイプを指定
+        fix_->position_covariance_type = sensor_msgs::msg::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
+        // --- [ここまで追加・修正] ---
+
         if(pub_f==true)
           fix_publisher_->publish(*fix_);
-
-        //std::cout << " publish()" << std::endl;
 
       }
       else{

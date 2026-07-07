@@ -47,9 +47,7 @@ class Lc29hNode{
     void init(std::shared_ptr<rclcpp::Node> node);
     void getRosParams();
 
-
   private:
-
     void publish_void_char(char *data){
       std::cout << data ;
     }
@@ -142,6 +140,7 @@ class Lc29hNode{
     int speed_over_cnt_;
     //bool rtk_fix_f_;
 
+    bool gnrmc_fix_;  // add by nishi 2026.7.4
 
     //rclcpp::QoS gps_qos(10);
 

@@ -53,6 +53,22 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}/
 )
 
+# Pythonスクリプトをinstallディレクトリにコピーする設定
+install(PROGRAMS
+  scripts/navsat_validator.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# 修正後：空の変数を使わず、直接 share/${PROJECT_NAME}/scripts を指定します
+#install(PROGRAMS
+#  scripts/navsat_validator.py
+#  DESTINATION share/${PROJECT_NAME}/scripts
+#)
+#install(DIRECTORY
+#  scripts
+#  DESTINATION share/${PROJECT_NAME}/
+#)
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -65,5 +81,6 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
 
 ament_package()
